@@ -62,3 +62,5 @@ RUN wget https://zenodo.org/records/10675405/files/model.zip && \
     rm -f model.zip
 
 WORKDIR /home/test/spired
+
+RUN python run_SPIRED.py --fasta_file example_spired/test.fasta --saved_folder example_spired
