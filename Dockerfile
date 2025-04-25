@@ -13,8 +13,8 @@ RUN micromamba install -y -n spired \
         pandas=2.2.0 \
     && micromamba clean --all -y
 
-ENV PATH $CONDA_DIR/envs/spired/bin:$PATH \
-    TORCH_HOME /opt/torch_cache
+ENV PATH=$CONDA_DIR/envs/spired/bin:$PATH \
+    TORCH_HOME=/opt/torch_cache
 
 WORKDIR /opt/spired
 
@@ -37,10 +37,10 @@ COPY run_SPIRED*.py .
 
 FROM ubuntu:22.04
 
-ENV PATH /opt/spired_env/bin:$PATH \
-    LD_LIBRARY_PATH /opt/spired_env/lib:$LD_LIBRARY_PATH \
-    TORCH_HOME /opt/torch_cache \
-    SPIRED_DIR /opt/spired
+ENV PATH=/opt/spired_env/bin:$PATH \
+    LD_LIBRARY_PATH=/opt/spired_env/lib:$LD_LIBRARY_PATH \
+    TORCH_HOME=/opt/torch_cache \
+    SPIRED_DIR=/opt/spired
 
 RUN useradd -ms /bin/bash test
 USER test
