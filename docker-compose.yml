@@ -1,0 +1,11 @@
+services:
+  spired:
+    build: .
+    volumes:
+      - ./data:/opt/spired/data:ro
+      - ./output:/opt/spired/output
+    command:
+      - --fasta_file
+      - data/myquery.fasta
+      - --saved_folder
+      - output

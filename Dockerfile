@@ -61,4 +61,6 @@ COPY run_SPIRED*.py .
 #                    --fasta_file example_spired/test.fasta \
 #                    --saved_folder example_spired"
 
+ENTRYPOINT ["python","run_SPIRED.py"]
+CMD ["--help"]
 
