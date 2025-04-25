@@ -1,6 +1,6 @@
 services:
   spired:
-    build: .
+    image: 2lu3/spired:v1.0
     volumes:
       - ./data:/opt/spired/data:ro
       - ./output:/opt/spired/output
