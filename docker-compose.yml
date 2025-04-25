@@ -12,4 +12,4 @@ services:
       - output
 
 volumes:
-  - spired_cache
+  spired_cache:
