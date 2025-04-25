@@ -31,13 +31,13 @@ RUN apt-get update \
 RUN python3 -m venv /opt/spired_env
 ENV PATH=/opt/spired_env/bin:$PATH
 RUN pip install --no-cache-dir --upgrade pip && \
-pip install --no-cache-dir \
-torch==2.1.0 \
-biopython==1.83 \
-click==8.1.7 \
-einops==0.7.0 \
-fair-esm==2.0.0 \
-pandas==2.2.0
+    pip install --no-cache-dir \
+    torch==2.1.0 \
+    biopython==1.83 \
+    click==8.1.7 \
+    einops==0.7.0 \
+    fair-esm==2.0.0 \
+    pandas==2.2.0
 
 # 4) ランタイム
 FROM python:3.11.12-slim-bookworm AS final
