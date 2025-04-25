@@ -46,6 +46,8 @@ ENV PATH=/opt/spired_env/bin:$PATH \
     SPIRED_DIR=/opt/spired
 WORKDIR $SPIRED_DIR
 
+RUN chown -R test:test $SPIRED_DIR
+
 RUN useradd -ms /bin/bash test
 USER test
 

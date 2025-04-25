@@ -4,8 +4,12 @@ services:
     volumes:
       - ./data:/opt/spired/data:ro
       - ./output:/opt/spired/output
+      - spired_cache:/opt/spired/cache
     command:
       - --fasta_file
       - data/myquery.fasta
       - --saved_folder
       - output
+
+volumes:
+  - spired_cache
