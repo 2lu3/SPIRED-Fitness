@@ -9,8 +9,6 @@ dependencies = [
     "click==8.1.7",
     "einops==0.7.0",
     "fair-esm==2.0.0",
-    "fastapi>=0.115.12",
     "pandas==2.2.0",
     "torch==2.1.0",
-    "uvicorn[standard]>=0.34.2",
 ]
