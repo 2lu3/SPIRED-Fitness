@@ -45,12 +45,10 @@ ENV PATH=/opt/spired_env/bin:$PATH \
     TORCH_HOME=/opt/torch_cache \
     SPIRED_DIR=/opt/spired
 WORKDIR $SPIRED_DIR
+RUN useradd -ms /bin/bash test && \
+    chown -R test:test $SPIRED_DIR
 
-RUN chown -R test:test $SPIRED_DIR
-
-RUN useradd -ms /bin/bash test
 USER test
-
 COPY --chown=test:test --from=build /opt/spired_env /opt/spired_env
 COPY --chown=test:test --from=python-download /opt/torch_cache /opt/torch_cache
 COPY --chown=test:test --from=wget-download /opt/model model
