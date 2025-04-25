@@ -1,41 +1,18 @@
-FROM mambaorg/micromamba:debian12-slim AS build
-
 ARG DEBIAN_FRONTEND=noninteractive
-ARG CONDA_DIR=/opt/conda
 
-USER root
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-      wget \
-      unzip \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p /opt/torch_cache \
- && chown mambauser:mambauser /opt/torch_cache
-
-USER mambauser
-
-RUN micromamba create -y -n spired \
-        python=3.11 \
-        pytorch=2.1.0 \
-        biopython=1.83 \
-        click=8.1.7 \
-        einops=0.7.0 \
-        fair-esm=2.0.0 \
-        pandas=2.2.0 \
-    && micromamba clean --all -y
-
-ENV PATH=$CONDA_DIR/envs/spired/bin:$PATH \
-    TORCH_HOME=/opt/torch_cache
-
-WORKDIR /opt/spired
-
-RUN wget -q https://zenodo.org/records/10675405/files/model.zip && \
-    unzip -q model.zip && \
+# 1) model.zip をダウンrpーど
+FROM alpine:3.21.3 AS wget-download
+RUN apk add --no-cache wget unzip && \
+    wget https://zenodo.org/records/10675405/files/model.zip && \
+    unzip model.zip -d /opt/model && \
     rm model.zip
 
-RUN python - <<'PY'
+# 2) torch hub models をダウンロード
+FROM python:3.11.12-slim-bookworm  AS python-download
+ENV TORCH_HOME=/opt/torch_cache
+RUN mkdir -p $TORCH_HOME && \
+    pip install --no-cache-dir torch==2.1.0 && \
+    python - <<'PY'
 import torch, os
 os.environ["TORCH_HOME"] = "/opt/torch_cache"
 models = ["esm2_t33_650M_UR50D", "esm2_t36_3B_UR50D"] + \
@@ -44,33 +21,44 @@ for m in models:
     torch.hub.load("facebookresearch/esm:main", m, trust_repo=True)
 PY
 
-WORKDIR /opt/app
-COPY scripts/ scripts/
-COPY run_SPIRED*.py .
+# 3) python 仮想環境を作成
+FROM python:3.11.12-bookworm AS build
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3-venv \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-FROM ubuntu:22.04
+RUN python3 -m venv /opt/spired_env
+ENV PATH=/opt/spired_env/bin:$PATH
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    torch==2.1.0 \
+    biopython==1.83 \
+    click==8.1.7 \
+    einops==0.7.0 \
+    fair-esm==2.0.0 \
+    pandas==2.2.0
 
+# 4) ランタイム
+FROM debian:bookworm-slim AS final
 ENV PATH=/opt/spired_env/bin:$PATH \
-    LD_LIBRARY_PATH=/opt/spired_env/lib:$LD_LIBRARY_PATH \
     TORCH_HOME=/opt/torch_cache \
     SPIRED_DIR=/opt/spired
+WORKDIR $SPIRED_DIR
 
 RUN useradd -ms /bin/bash test
 USER test
-#RUN echo "conda activate spired_fitness" >> ~/.bashrc && \
-#    sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' ~/.bashrc
 
-COPY --chown=test:test --from=build /opt/conda/envs/spired /opt/spired_env
-COPY --chown=test:test --from=build /opt/torch_cache /opt/torch_cache
-COPY --chown=test:test --from=build /opt/spired /opt/spired
-COPY --chown=test:test --from=build /opt/app /opt/app
-
-# Set up SPIRED working directory
-WORKDIR $SPIRED_DIR
+COPY --chown=test:test --from=build /opt/spired_env /opt/spired_env
+COPY --chown=test:test --from=python-download /opt/torch_cache /opt/torch_cache
+COPY --chown=test:test --from=wget-download /opt/model model
+COPY scripts/ scripts
+COPY run_SPIRED*.py .
 
 #RUN bash -c "source /opt/conda/etc/profile.d/conda.sh \
 #             && conda activate spired_fitness \
 #             && python run_SPIRED.py \
 #                    --fasta_file example_spired/test.fasta \
 #                    --saved_folder example_spired"
+
 
