@@ -1,9 +1,22 @@
 FROM mambaorg/micromamba:debian12-slim AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG CONDA_DIR /opt/conda
+ARG CONDA_DIR=/opt/conda
 
-RUN micromamba install -y -n spired \
+USER root
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      wget \
+      unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /opt/torch_cache \
+ && chown mambauser:mambauser /opt/torch_cache
+
+USER mambauser
+
+RUN micromamba create -y -n spired \
         python=3.11 \
         pytorch=2.1.0 \
         biopython=1.83 \
