@@ -1,0 +1,19 @@
+[project]
+name = "spired-fitness"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "biopython==1.83",
+    "click==8.1.7",
+    "einops==0.7.0",
+    "fair-esm==2.0.0",
+    "pandas==2.2.0",
+    "torch==2.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "scalene>=1.5.51",
+]

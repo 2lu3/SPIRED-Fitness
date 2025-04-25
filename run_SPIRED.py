@@ -7,6 +7,21 @@ import pandas as pd
 from Bio import SeqIO
 from scripts.model import SPIRED_Fitness_Union
 from scripts.utils_train_valid import getDataTest
+import pickle
+
+CACHE_DIR  = "cache"
+def load_and_cahce(repo: str, model: str):
+    os.makedirs(os.path.expanduser(CACHE_DIR), exist_ok=True)
+    cache_path = os.path.join(os.path.expanduser(CACHE_DIR), model)
+
+    if os.path.exists(cache_path):
+        print("Loading cached model from", cache_path)
+        model, alphabet = pickle.load(open(cache_path, "rb"))
+    else:
+        print("Caching model to", cache_path)
+        model, alphabet = torch.hub.load(repo, model)
+        pickle.dump((model, alphabet), open(cache_path, "wb"))
+    return model, alphabet
 
 amino_acid_list = list("ARNDCQEGHILKMFPSTWYV")
 amino_acid_dict = {}
@@ -36,20 +51,28 @@ def main(fasta_file, saved_folder):
     model.eval()
 
     # load ESM-2 650M model
-    esm2_650M, _ = torch.hub.load("facebookresearch/esm:main", "esm2_t33_650M_UR50D")
+    #esm2_650M, _ = torch.hub.load("facebookresearch/esm:main", "esm2_t33_650M_UR50D")
+    esm2_650M, _ = load_and_cahce("facebookresearch/esm:main", "esm2_t33_650M_UR50D")
     esm2_650M.eval()
 
     # load ESM-2 3B model
-    esm2_3B, esm2_alphabet = torch.hub.load("facebookresearch/esm:main", "esm2_t36_3B_UR50D")
+    #esm2_3B, esm2_alphabet = torch.hub.load("facebookresearch/esm:main", "esm2_t36_3B_UR50D")
+    esm2_3B, esm2_alphabet = load_and_cahce("facebookresearch/esm:main", "esm2_t36_3B_UR50D")
+
     esm2_3B.eval()
     esm2_batch_converter = esm2_alphabet.get_batch_converter()
 
     # load 5 ESM-1v models
-    esm1v_1, _ = torch.hub.load("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_1")
-    esm1v_2, _ = torch.hub.load("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_2")
-    esm1v_3, _ = torch.hub.load("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_3")
-    esm1v_4, _ = torch.hub.load("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_4")
-    esm1v_5, esm1v_alphabet = torch.hub.load("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_5")
+    #esm1v_1, _ = torch.hub.load("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_1")
+    esm1v_1, _ = load_and_cahce("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_1")
+    #Jesm1v_2, _ = torch.hub.load("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_2")
+    esm1v_2, _ = load_and_cahce("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_2")
+    #esm1v_3, _ = torch.hub.load("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_3")
+    esm1v_3, _ = load_and_cahce("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_3")
+    #esm1v_4, _ = torch.hub.load("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_4")
+    esm1v_4, _ = load_and_cahce("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_4")
+    #esm1v_5, esm1v_alphabet = torch.hub.load("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_5")
+    esm1v_5, esm1v_alphabet = load_and_cahce("facebookresearch/esm:main", "esm1v_t33_650M_UR90S_5")
     esm1v_1.eval()
     esm1v_2.eval()
     esm1v_3.eval()
