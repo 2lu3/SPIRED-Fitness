@@ -1,70 +1,63 @@
-FROM registry.codeocean.com/codeocean/mambaforge3:22.11.1-4-ubuntu22.04
+FROM mambaorg/micromamba:debian12-slim AS build
 
-# install dependencies
 ARG DEBIAN_FRONTEND=noninteractive
-ENV CONDA_DIR /opt/conda
-ENV PATH=$CONDA_DIR/bin:$PATH
+ARG CONDA_DIR /opt/conda
 
-RUN conda create -n spired_fitness python=3.11 && \
-    echo '# >>> conda initialize >>>' >> ~/.bashrc && \
-    echo '# !! Contents within this block are managed by "conda init" !!' >> ~/.bashrc && \
-    echo '__conda_setup="$('\''/opt/conda/bin/conda'\'' '\''shell.bash'\'' '\''hook'\'' 2> /dev/null)"' >> ~/.bashrc && \
-    echo 'if [ $? -eq 0 ]; then' >> ~/.bashrc && \
-    echo '    eval "$__conda_setup"' >> ~/.bashrc && \
-    echo 'else' >> ~/.bashrc && \
-    echo '    if [ -f "/opt/conda/etc/profile.d/conda.sh" ]; then' >> ~/.bashrc && \
-    echo '        . "/opt/conda/etc/profile.d/conda.sh"' >> ~/.bashrc && \
-    echo '    else' >> ~/.bashrc && \
-    echo '        export PATH="/opt/conda/bin:$PATH"' >> ~/.bashrc && \
-    echo '    fi' >> ~/.bashrc && \
-    echo 'fi' >> ~/.bashrc && \
-    echo 'unset __conda_setup' >> ~/.bashrc && \
-    echo '# <<< conda initialize <<<' >> ~/.bashrc && \
-    . ~/.bashrc && \
-    conda activate spired_fitness && \
-    conda install -y --channel=pytorch cpuonly==2.0 pytorch==2.1.0 && \
-    conda clean -ya && \
-    pip3 install -U --no-cache-dir biopython==1.83 click==8.1.7 einops==0.7.0 fair-esm==2.0.0 pandas==2.2.0
+RUN micromamba install -y -n spired \
+        python=3.11 \
+        pytorch=2.1.0 \
+        biopython=1.83 \
+        click=8.1.7 \
+        einops=0.7.0 \
+        fair-esm=2.0.0 \
+        pandas=2.2.0 \
+    && micromamba clean --all -y
 
-# create a new user
+ENV PATH $CONDA_DIR/envs/spired/bin:$PATH \
+    TORCH_HOME /opt/torch_cache
+
+WORKDIR /opt/spired
+
+RUN wget -q https://zenodo.org/records/10675405/files/model.zip && \
+    unzip -q model.zip && \
+    rm model.zip
+
+RUN python - <<'PY'
+import torch, os
+os.environ["TORCH_HOME"] = "/opt/torch_cache"
+models = ["esm2_t33_650M_UR50D", "esm2_t36_3B_UR50D"] + \
+         [f"esm1v_t33_650M_UR90S_{i}" for i in range(1,6)]
+for m in models:
+    torch.hub.load("facebookresearch/esm:main", m, trust_repo=True)
+PY
+
+WORKDIR /opt/app
+COPY scripts/ scripts/
+COPY run_SPIRED*.py .
+
+FROM ubuntu:22.04
+
+ENV PATH /opt/spired_env/bin:$PATH \
+    LD_LIBRARY_PATH /opt/spired_env/lib:$LD_LIBRARY_PATH \
+    TORCH_HOME /opt/torch_cache \
+    SPIRED_DIR /opt/spired
+
 RUN useradd -ms /bin/bash test
 USER test
-RUN echo "conda activate spired_fitness" >> ~/.bashrc && \
-    sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' ~/.bashrc
+#RUN echo "conda activate spired_fitness" >> ~/.bashrc && \
+#    sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' ~/.bashrc
+
+COPY --chown=test:test --from=build /opt/conda/envs/spired /opt/spired_env
+COPY --chown=test:test --from=build /opt/torch_cache /opt/torch_cache
+COPY --chown=test:test --from=build /opt/spired /opt/spired
+COPY --chown=test:test --from=build /opt/app /opt/app
 
 # Set up SPIRED working directory
-WORKDIR /home/test/spired
-COPY --chown=test:test ./scripts ./scripts
-COPY --chown=test:test ./run_SPIRED.py ./run_SPIRED.py
-COPY --chown=test:test ./run_SPIRED-Fitness.py ./run_SPIRED-Fitness.py
-COPY --chown=test:test ./run_SPIRED-Stab.py ./run_SPIRED-Stab.py
-COPY --chown=test:test ./example_fitness/test.fasta ./example_fitness/test.fasta
-COPY --chown=test:test ./example_stab/test.fasta ./example_stab/test.fasta
-COPY --chown=test:test ./example_spired/test.fasta ./example_spired/test.fasta
+WORKDIR $SPIRED_DIR
 
-RUN echo "## Try SPIRED in docker" > README.md && \
-    echo "" >> README.md && \
-    echo "\`\`\`bash" >> README.md && \
-    echo "# run SPIRED" >> README.md && \
-    echo "python run_SPIRED.py --fasta_file example_spired/test.fasta --saved_folder example_spired" >> README.md && \
-    echo "" >> README.md && \
-    echo "# run SPIRED-Fitness" >> README.md && \
-    echo "python run_SPIRED-Fitness.py --fasta_file example_fitness/test.fasta --saved_folder example_fitness" >> README.md && \
-    echo "" >> README.md && \
-    echo "# run SPIRED-Stab" >> README.md && \
-    echo "python run_SPIRED-Stab.py --fasta_file example_stab/test.fasta --saved_folder example_stab" >> README.md && \
-    echo "\`\`\`" >> README.md
+#RUN bash -c "source /opt/conda/etc/profile.d/conda.sh \
+#             && conda activate spired_fitness \
+#             && python run_SPIRED.py \
+#                    --fasta_file example_spired/test.fasta \
+#                    --saved_folder example_spired"
 
-# Download model parameter
-WORKDIR /home/test/spired/model
-RUN wget https://zenodo.org/records/10675405/files/model.zip && \
-    unzip model.zip && \
-    rm -f model.zip
-
-WORKDIR /home/test/spired
-
-RUN bash -c "source /opt/conda/etc/profile.d/conda.sh \
-             && conda activate spired_fitness \
-             && python run_SPIRED.py \
-                    --fasta_file example_spired/test.fasta \
-                    --saved_folder example_spired"
