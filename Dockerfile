@@ -43,8 +43,8 @@ ENV PATH=/opt/spired_env/bin:$PATH \
     SPIRED_DIR=/opt/spired
 WORKDIR $SPIRED_DIR
 RUN useradd -ms /bin/bash test && \
+    mkdir -p $TORCH_HOME $SPIRED_DIR/cache && \
     chown -R test:test $SPIRED_DIR $SPIRED_DIR/cache
-
 
 USER test
 COPY --chown=test:test --from=build /opt/spired_env/.venv /opt/spired_env
