@@ -28,16 +28,13 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m venv /opt/spired_env
-ENV PATH=/opt/spired_env/bin:$PATH
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-    torch==2.1.0 \
-    biopython==1.83 \
-    click==8.1.7 \
-    einops==0.7.0 \
-    fair-esm==2.0.0 \
-    pandas==2.2.0
+RUN pip install --no-cache-dir uv
+
+WORKDIR /opt/spired_env
+COPY pyproject.toml uv.lock* ./
+
+RUN uv venv --python 3.11 && \
+    uv sync
 
 # 4) ランタイム
 FROM python:3.11.12-slim-bookworm AS final
@@ -50,7 +47,7 @@ RUN useradd -ms /bin/bash test && \
 
 
 USER test
-COPY --chown=test:test --from=build /opt/spired_env /opt/spired_env
+COPY --chown=test:test --from=build /opt/spired_env/.venv /opt/spired_env
 COPY --chown=test:test --from=python-download /opt/torch_cache /opt/torch_cache
 COPY --chown=test:test --from=wget-download /opt/model model
 COPY scripts/ scripts
