@@ -10,8 +10,9 @@ on:
 jobs:
 
   build:
-
     runs-on: self-hosted
+    environment:
+      name: production
 
     steps:
       # ソースコードをチェックアウト
