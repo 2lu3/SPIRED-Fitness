@@ -31,16 +31,16 @@ RUN apt-get update \
 RUN python3 -m venv /opt/spired_env
 ENV PATH=/opt/spired_env/bin:$PATH
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-    torch==2.1.0 \
-    biopython==1.83 \
-    click==8.1.7 \
-    einops==0.7.0 \
-    fair-esm==2.0.0 \
-    pandas==2.2.0
+pip install --no-cache-dir \
+torch==2.1.0 \
+biopython==1.83 \
+click==8.1.7 \
+einops==0.7.0 \
+fair-esm==2.0.0 \
+pandas==2.2.0
 
 # 4) ランタイム
-FROM debian:bookworm-slim AS final
+FROM python:3.11.12-slim-bookworm AS final
 ENV PATH=/opt/spired_env/bin:$PATH \
     TORCH_HOME=/opt/torch_cache \
     SPIRED_DIR=/opt/spired
@@ -55,12 +55,5 @@ COPY --chown=test:test --from=wget-download /opt/model model
 COPY scripts/ scripts
 COPY run_SPIRED*.py .
 
-#RUN bash -c "source /opt/conda/etc/profile.d/conda.sh \
-#             && conda activate spired_fitness \
-#             && python run_SPIRED.py \
-#                    --fasta_file example_spired/test.fasta \
-#                    --saved_folder example_spired"
-
 ENTRYPOINT ["python","run_SPIRED.py"]
 CMD ["--help"]
-
